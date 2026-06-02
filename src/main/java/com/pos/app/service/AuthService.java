@@ -1,7 +1,7 @@
 package com.pos.app.service;
 
 import com.pos.app.dto.request.LoginRequestDTO;
-import com.pos.app.dto.request.RegisterRequestDTO;
+import com.pos.app.dto.request.RegisterRequest;
 import com.pos.app.dto.response.AuthResponse;
 import com.pos.app.dto.response.UserResponse;
 import com.pos.app.exception.ResourceNotFoundException;
@@ -32,6 +32,7 @@ public class AuthService {
     private final UserDetailsService userDetailsService;
 
     // ================= LOGIN =================
+
     public AuthResponse login(LoginRequestDTO request) {
 
         authenticationManager.authenticate(
@@ -59,29 +60,29 @@ public class AuthService {
     }
 
     // ================= REGISTER =================
-    public UserResponse registerAdmin(RegisterRequestDTO req, User by) {
-        return registerUser(req, Role.ADMIN, by);
-    }
 
-    public UserResponse registerManager(RegisterRequestDTO req, User by) {
-        return registerUser(req, Role.MANAGER, by);
-    }
-
-    public UserResponse registerCashier(RegisterRequestDTO req, User by) {
-        return registerUser(req, Role.CASHIER, by);
-    }
-
-    private UserResponse registerUser(RegisterRequestDTO request, Role role, User createdBy) {
+    public UserResponse register(RegisterRequest request, User createdBy) {
 
         if (userRepository.existsByUsername(request.getUsername())) {
-            throw new UsernameAlreadyExistsException("Username already exists");
+            throw new UsernameAlreadyExistsException(
+                    "Username already exists"
+            );
         }
+
+        if (userRepository.existsByEmail(request.getEmail())) {
+            throw new RuntimeException(
+                    "Email already exists"
+            );
+        }
+
+        validateRoleCreation(createdBy, request.getRole());
 
         User user = User.builder()
                 .fullName(request.getFullName())
                 .username(request.getUsername())
+                .email(request.getEmail())
                 .password(passwordEncoder.encode(request.getPassword()))
-                .role(role)
+                .role(request.getRole())
                 .active(true)
                 .registeredBy(createdBy)
                 .build();
@@ -89,7 +90,46 @@ public class AuthService {
         return toResponse(userRepository.save(user));
     }
 
+    // ================= ROLE VALIDATION =================
+
+    private void validateRoleCreation(
+            User creator,
+            Role targetRole
+    ) {
+
+        Role creatorRole = creator.getRole();
+
+        switch (creatorRole) {
+
+            case SUPER_ADMIN:
+                return;
+
+            case ADMIN:
+                if (targetRole == Role.SUPER_ADMIN ||
+                        targetRole == Role.ADMIN) {
+                    throw new RuntimeException(
+                            "Admin cannot create Admin or Super Admin"
+                    );
+                }
+                return;
+
+            case MANAGER:
+                if (targetRole != Role.CASHIER) {
+                    throw new RuntimeException(
+                            "Manager can only create Cashiers"
+                    );
+                }
+                return;
+
+            default:
+                throw new RuntimeException(
+                        "You are not allowed to create users"
+                );
+        }
+    }
+
     // ================= USERS =================
+
     public List<UserResponse> getAllUsers() {
         return userRepository.findAll()
                 .stream()
@@ -98,45 +138,70 @@ public class AuthService {
     }
 
     public UserResponse getUserById(Long id) {
-        return userRepository.findById(id)
-                .map(this::toResponse)
-                .orElseThrow(() -> new ResourceNotFoundException("User not found: " + id));
+
+        User user = userRepository.findById(id)
+                .orElseThrow(() ->
+                        new ResourceNotFoundException(
+                                "User not found: " + id
+                        )
+                );
+
+        return toResponse(user);
     }
 
     public List<UserResponse> getUsersByRole(String role) {
-        return userRepository.findByRole(Role.valueOf(role.toUpperCase()))
+
+        return userRepository.findByRole(
+                        Role.valueOf(role.toUpperCase())
+                )
                 .stream()
                 .map(this::toResponse)
                 .collect(Collectors.toList());
     }
 
     public UserResponse deactivateUser(Long id) {
+
         User user = userRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("User not found: " + id));
+                .orElseThrow(() ->
+                        new ResourceNotFoundException(
+                                "User not found: " + id
+                        )
+                );
 
         user.setActive(false);
+
         return toResponse(userRepository.save(user));
     }
 
     public UserResponse activateUser(Long id) {
+
         User user = userRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("User not found: " + id));
+                .orElseThrow(() ->
+                        new ResourceNotFoundException(
+                                "User not found: " + id
+                        )
+                );
 
         user.setActive(true);
+
         return toResponse(userRepository.save(user));
     }
 
     // ================= MAPPER =================
+
     private UserResponse toResponse(User user) {
+
         return UserResponse.builder()
                 .id(user.getId())
                 .fullName(user.getFullName())
                 .username(user.getUsername())
                 .role(user.getRole().name())
                 .active(user.isActive())
-                .registeredBy(user.getRegisteredBy() != null
-                        ? user.getRegisteredBy().getFullName()
-                        : "System")
+                .registeredBy(
+                        user.getRegisteredBy() != null
+                                ? user.getRegisteredBy().getFullName()
+                                : "System"
+                )
                 .createdAt(user.getCreatedAt())
                 .build();
     }
