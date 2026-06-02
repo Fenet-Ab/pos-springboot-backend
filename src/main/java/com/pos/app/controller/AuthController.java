@@ -32,18 +32,15 @@ public class AuthController {
     }
 
     @PostMapping("/register/admin")
-    public ResponseEntity<ApiResponse<UserResponse>> registerAdmin(@Valid @RequestBody RegisterRequestDTO req, @AuthenticationPrincipal User me) {
-        return ResponseEntity.status(201).body(ApiResponse.success("Admin registered", authService.registerAdmin(req, me)));
-    }
+    public ResponseEntity<ApiResponse<UserResponse>> registerAdmin(
+            @Valid @RequestBody RegisterRequest req,
+            @AuthenticationPrincipal User me) {
 
-    @PostMapping("/register/manager")
-    public ResponseEntity<ApiResponse<UserResponse>> registerManager(@Valid @RequestBody RegisterRequestDTO req, @AuthenticationPrincipal User me) {
-        return ResponseEntity.status(201).body(ApiResponse.success("Manager registered", authService.registerManager(req, me)));
-    }
-
-    @PostMapping("/register/cashier")
-    public ResponseEntity<ApiResponse<UserResponse>> registerCashier(@Valid @RequestBody RegisterRequestDTO req, @AuthenticationPrincipal User me) {
-        return ResponseEntity.status(201).body(ApiResponse.success("Cashier registered", authService.registerCashier(req, me)));
+        return ResponseEntity.status(201)
+                .body(ApiResponse.success(
+                        "Admin registered",
+                        authService.register(req, me)
+                ));
     }
 
     @GetMapping("/me")
