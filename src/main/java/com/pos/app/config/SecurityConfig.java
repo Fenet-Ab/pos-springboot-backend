@@ -5,6 +5,10 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
+import org.springframework.web.cors.CorsConfiguration;
+import org.springframework.web.cors.CorsConfigurationSource;
+import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
+import java.util.List;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.AuthenticationProvider;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
@@ -33,22 +37,24 @@ public class SecurityConfig {
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
 
         http
+                .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .csrf(AbstractHttpConfigurer::disable)
 
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/api/auth/login").permitAll()
+                        .requestMatchers("/api/auth/login", "/error").permitAll()
+                        .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
 
                         .requestMatchers(HttpMethod.POST, "/api/auth/register/admin")
-                        .hasRole("SUPER_ADMIN")
+                        .hasAuthority("ROLE_SUPER_ADMIN")
 
                         .requestMatchers(HttpMethod.POST, "/api/auth/register/manager")
-                        .hasAnyRole("SUPER_ADMIN", "ADMIN")
+                        .hasAnyAuthority("ROLE_SUPER_ADMIN", "ROLE_ADMIN")
 
                         .requestMatchers(HttpMethod.POST, "/api/auth/register/cashier")
-                        .hasAnyRole("SUPER_ADMIN", "ADMIN", "MANAGER")
+                        .hasAnyAuthority("ROLE_SUPER_ADMIN", "ROLE_ADMIN", "ROLE_MANAGER")
 
                         .requestMatchers(HttpMethod.GET, "/api/users/**")
-                        .hasAnyRole("SUPER_ADMIN", "ADMIN")
+                        .hasAnyAuthority("ROLE_SUPER_ADMIN", "ROLE_ADMIN")
 
                         .anyRequest().authenticated()
                 )
@@ -65,6 +71,18 @@ public class SecurityConfig {
                 .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
+    }
+
+    @Bean
+    public CorsConfigurationSource corsConfigurationSource() {
+        CorsConfiguration configuration = new CorsConfiguration();
+        configuration.setAllowedOriginPatterns(List.of("*"));
+        configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
+        configuration.setAllowedHeaders(List.of("Authorization", "Content-Type", "Accept"));
+        configuration.setAllowCredentials(true);
+        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+        source.registerCorsConfiguration("/**", configuration);
+        return source;
     }
 
     // ✅ FIXED DAO provider
