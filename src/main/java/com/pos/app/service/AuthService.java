@@ -1,5 +1,7 @@
 package com.pos.app.service;
 
+import com.pos.app.dto.request.ChangePasswordRequest;
+import com.pos.app.dto.request.ForgotPasswordRequest;
 import com.pos.app.dto.request.LoginRequestDTO;
 import com.pos.app.dto.request.RegisterRequest;
 import com.pos.app.dto.response.AuthResponse;
@@ -19,6 +21,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 @Service
@@ -30,6 +33,7 @@ public class AuthService {
     private final JwtUtil jwtUtil;
     private final AuthenticationManager authenticationManager;
     private final UserDetailsService userDetailsService;
+    private final EmailService emailService;
 
     // ================= LOGIN =================
 
@@ -56,6 +60,7 @@ public class AuthService {
                 .fullName(user.getFullName())
                 .role(user.getRole().name())
                 .message("Login successful")
+                .passwordResetRequired(user.isPasswordResetRequired())
                 .build();
     }
 
@@ -217,5 +222,37 @@ public class AuthService {
                 )
                 .createdAt(user.getCreatedAt())
                 .build();
+    }
+
+    // ================= Change password =================
+    public void changePassword(User currentUser, ChangePasswordRequest request) {
+        if(!passwordEncoder.matches(request.getCurrentPassword(),currentUser.getPassword())) {
+            throw new RuntimeException("Current password doesn't match");
+        }
+        currentUser.setPassword(passwordEncoder.encode(request.getNewPassword()));
+        currentUser.setPasswordResetRequired(false);
+        userRepository.save(currentUser);
+    }
+
+
+    // ================= forgot password =================
+    private String generateTempPassword() {
+        return UUID.randomUUID()
+                .toString()
+                .replace("-", "")
+                .substring(0, 8);
+    }
+
+    public void forgotPassword(ForgotPasswordRequest request) {
+        User user = userRepository.findByEmail(request.getEmail())
+                .orElseThrow(()->new ResourceNotFoundException("Email not found"));
+        String tempPassword = generateTempPassword();
+
+        user.setPassword(passwordEncoder.encode(tempPassword));
+        user.setPasswordResetRequired(true);
+
+        userRepository.save(user);
+
+        emailService.sendTemporaryPassword(user.getEmail(), tempPassword);
     }
 }
