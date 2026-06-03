@@ -44,17 +44,11 @@ public class SecurityConfig {
                         .requestMatchers("/api/auth/login", "/error").permitAll()
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
 
-                        .requestMatchers(HttpMethod.POST, "/api/auth/register/admin")
-                        .hasAuthority("ROLE_SUPER_ADMIN")
-
-                        .requestMatchers(HttpMethod.POST, "/api/auth/register/manager")
-                        .hasAnyAuthority("ROLE_SUPER_ADMIN", "ROLE_ADMIN")
-
-                        .requestMatchers(HttpMethod.POST, "/api/auth/register/cashier")
+                        .requestMatchers(HttpMethod.POST, "/api/auth/register")
                         .hasAnyAuthority("ROLE_SUPER_ADMIN", "ROLE_ADMIN", "ROLE_MANAGER")
 
-                        .requestMatchers(HttpMethod.GET, "/api/users/**")
-                        .hasAnyAuthority("ROLE_SUPER_ADMIN", "ROLE_ADMIN")
+                        .requestMatchers("/api/users/**")
+                        .hasAnyAuthority("ROLE_SUPER_ADMIN", "ROLE_ADMIN", "ROLE_MANAGER")
 
                         .anyRequest().authenticated()
                 )
