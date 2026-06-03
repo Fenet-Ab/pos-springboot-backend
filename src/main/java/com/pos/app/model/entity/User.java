@@ -42,6 +42,9 @@ public class User  implements UserDetails {
     @Column(nullable = false)
     private boolean active;
 
+    @Column(nullable = false, columnDefinition = "boolean default false")
+    private boolean passwordResetRequired = false;
+
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "registered_by")
