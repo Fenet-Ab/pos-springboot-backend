@@ -75,7 +75,7 @@ public class AuthService {
             );
         }
 
-        validateRoleCreation(createdBy, request.getRole());
+        validateRoleAction(createdBy, request.getRole());
 
         User user = User.builder()
                 .fullName(request.getFullName())
@@ -92,14 +92,14 @@ public class AuthService {
 
     // ================= ROLE VALIDATION =================
 
-    private void validateRoleCreation(
-            User creator,
+    private void validateRoleAction(
+            User actor,
             Role targetRole
     ) {
 
-        Role creatorRole = creator.getRole();
+        Role actorRole = actor.getRole();
 
-        switch (creatorRole) {
+        switch (actorRole) {
 
             case SUPER_ADMIN:
                 return;
@@ -108,7 +108,7 @@ public class AuthService {
                 if (targetRole == Role.SUPER_ADMIN ||
                         targetRole == Role.ADMIN) {
                     throw new RuntimeException(
-                            "Admin cannot create Admin or Super Admin"
+                            "Admin cannot perform this action on Admin or Super Admin"
                     );
                 }
                 return;
@@ -116,14 +116,14 @@ public class AuthService {
             case MANAGER:
                 if (targetRole != Role.CASHIER) {
                     throw new RuntimeException(
-                            "Manager can only create Cashiers"
+                            "Manager can only perform this action on Cashiers"
                     );
                 }
                 return;
 
             default:
                 throw new RuntimeException(
-                        "You are not allowed to create users"
+                        "You are not allowed to perform this action"
                 );
         }
     }
@@ -159,7 +159,7 @@ public class AuthService {
                 .collect(Collectors.toList());
     }
 
-    public UserResponse deactivateUser(Long id) {
+    public UserResponse deactivateUser(Long id, User actor) {
 
         User user = userRepository.findById(id)
                 .orElseThrow(() ->
@@ -167,13 +167,14 @@ public class AuthService {
                                 "User not found: " + id
                         )
                 );
+        validateRoleAction(actor, user.getRole());
 
         user.setActive(false);
 
         return toResponse(userRepository.save(user));
     }
 
-    public UserResponse activateUser(Long id) {
+    public UserResponse activateUser(Long id, User actor) {
 
         User user = userRepository.findById(id)
                 .orElseThrow(() ->
@@ -181,10 +182,22 @@ public class AuthService {
                                 "User not found: " + id
                         )
                 );
+        validateRoleAction(actor, user.getRole());
 
         user.setActive(true);
 
         return toResponse(userRepository.save(user));
+    }
+
+    public void deleteUser(Long id, User actor) {
+        User user = userRepository.findById(id)
+                .orElseThrow(() ->
+                        new ResourceNotFoundException(
+                                "User not found: " + id
+                        )
+                );
+        validateRoleAction(actor, user.getRole());
+        userRepository.delete(user);
     }
 
     // ================= MAPPER =================
