@@ -47,4 +47,23 @@ public class AuthController {
     public ResponseEntity<ApiResponse<UserResponse>> me(@AuthenticationPrincipal User me) {
         return ResponseEntity.ok(ApiResponse.success("Current user", authService.getUserById(me.getId())));
     }
+
+    @RequestMapping(value = "/change-password", method = {RequestMethod.POST, RequestMethod.PUT, RequestMethod.PATCH})
+    public ResponseEntity<ApiResponse<String>> changePassword(
+            @Valid @RequestBody ChangePasswordRequest request,
+            @AuthenticationPrincipal User me
+    ){
+        authService.changePassword(me,request);
+        return ResponseEntity.ok(
+                ApiResponse.success("Change password successful", null));
+    }
+
+    @PostMapping("/forgot-password")
+    public ResponseEntity<ApiResponse<String>> forgotPassword(
+            @Valid @RequestBody ForgotPasswordRequest request
+    ){
+        authService.forgotPassword(request);
+        return ResponseEntity.ok(
+                ApiResponse.success("Temporary password sent to email", null));
+    }
 }
