@@ -31,14 +31,14 @@ public class AuthController {
         );
     }
 
-    @PostMapping("/register/admin")
-    public ResponseEntity<ApiResponse<UserResponse>> registerAdmin(
+    @PostMapping("/register")
+    public ResponseEntity<ApiResponse<UserResponse>> register(
             @Valid @RequestBody RegisterRequest req,
             @AuthenticationPrincipal User me) {
 
         return ResponseEntity.status(201)
                 .body(ApiResponse.success(
-                        "Admin registered",
+                        "User registered",
                         authService.register(req, me)
                 ));
     }
