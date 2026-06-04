@@ -21,7 +21,4 @@ public class RegisterRequest {
     @NotNull
     private Role role;
 
-
-    @NotBlank
-    private String password;
 }
