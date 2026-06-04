@@ -82,17 +82,24 @@ public class AuthService {
 
         validateRoleAction(createdBy, request.getRole());
 
+        String tempPassword = generateTempPassword();
+
         User user = User.builder()
                 .fullName(request.getFullName())
                 .username(request.getUsername())
                 .email(request.getEmail())
-                .password(passwordEncoder.encode(request.getPassword()))
+                .password(passwordEncoder.encode(tempPassword))
                 .role(request.getRole())
                 .active(true)
                 .registeredBy(createdBy)
+                .passwordResetRequired(true)
                 .build();
 
-        return toResponse(userRepository.save(user));
+        user = userRepository.save(user);
+
+        emailService.sendAccountCreationEmail(user.getEmail(), user.getUsername(), tempPassword);
+
+        return toResponse(user);
     }
 
     // ================= ROLE VALIDATION =================
