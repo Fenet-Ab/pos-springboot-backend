@@ -31,4 +31,29 @@ public class EmailService {
             throw new RuntimeException("Failed to send email. Please check your SMTP configuration.");
         }
     }
+
+    public void sendAccountCreationEmail(
+            String email,
+            String username,
+            String password
+    ) {
+
+        SimpleMailMessage message = new SimpleMailMessage();
+
+        message.setTo(email);
+        message.setSubject("POS Account Created");
+        message.setText(
+                "Your account has been created successfully.\n\n" +
+                "Username: " + username + "\n" +
+                "Temporary Password: " + password + "\n\n" +
+                "Please login and change your password immediately."
+        );
+
+        try {
+            mailSender.send(message);
+        } catch (org.springframework.mail.MailException e) {
+            System.err.println("Failed to send email: " + e.getMessage());
+            throw new RuntimeException("Failed to send email. Please check your SMTP configuration.");
+        }
+    }
 }
