@@ -53,6 +53,14 @@ public class SecurityConfig {
                         .requestMatchers("/api/auth/change-password")
                         .hasAnyAuthority("ROLE_SUPER_ADMIN", "ROLE_ADMIN", "ROLE_MANAGER","ROLE_CASHIER")
 
+                        .requestMatchers(HttpMethod.POST, "/api/products")
+                        .hasAnyAuthority(
+                                "ROLE_SUPER_ADMIN",
+                                "ROLE_ADMIN",
+                                "ROLE_MANAGER"
+                        )
+
+
                         .anyRequest().authenticated()
                 )
 
