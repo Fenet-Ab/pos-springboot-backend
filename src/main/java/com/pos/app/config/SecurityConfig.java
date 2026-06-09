@@ -42,6 +42,7 @@ public class SecurityConfig {
 
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/api/auth/login", "/api/auth/forgot-password", "/error").permitAll()
+                        .requestMatchers("/api/sales/chapa/**").permitAll()
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
 
                         .requestMatchers(HttpMethod.POST, "/api/auth/register")
@@ -58,6 +59,16 @@ public class SecurityConfig {
                                 "ROLE_SUPER_ADMIN",
                                 "ROLE_ADMIN",
                                 "ROLE_MANAGER"
+                        )
+                        .requestMatchers(
+                                HttpMethod.POST,
+                                "/api/sales"
+                        )
+                        .hasAnyAuthority(
+                                "ROLE_SUPER_ADMIN",
+                                "ROLE_ADMIN",
+                                "ROLE_MANAGER",
+                                "ROLE_CASHIER"
                         )
 
 
