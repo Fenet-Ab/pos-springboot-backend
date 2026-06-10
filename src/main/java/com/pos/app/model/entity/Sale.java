@@ -36,6 +36,18 @@ public class Sale {
 
     private String checkoutUrl;
 
+    private BigDecimal refundAmount;
+
+    private String refundReason;
+
+    private String refundRefId;
+
+    private LocalDateTime refundedAt;
+
+    @ManyToOne
+    @JoinColumn(name = "refunded_by_id")
+    private User refundedBy;
+
     @ManyToOne
     @JoinColumn(name = "cashier_id")
     private User cashier;
