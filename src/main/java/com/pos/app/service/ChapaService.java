@@ -2,6 +2,8 @@ package com.pos.app.service;
 
 import com.pos.app.config.ChapaProperties;
 import com.pos.app.dto.chapa.ChapaInitializeResponse;
+import com.pos.app.dto.chapa.ChapaRefundResponse;
+import com.pos.app.dto.chapa.ChapaRefundVerifyResponse;
 import com.pos.app.dto.chapa.ChapaVerifyResponse;
 import com.pos.app.model.entity.Sale;
 import com.pos.app.model.entity.User;
@@ -37,6 +39,43 @@ public class ChapaService {
             case BANK_CARD -> initializeCheckout(sale, email, customerName);
             default -> throw new IllegalArgumentException("Unsupported online payment method: " + paymentMethod);
         };
+    }
+
+    public String refundTransaction(String txRef, java.math.BigDecimal amount, String reason) {
+        MultiValueMap<String, String> body = new LinkedMultiValueMap<>();
+        if (amount != null) {
+            body.add("amount", formatAmount(amount));
+        }
+        if (reason != null && !reason.isBlank()) {
+            body.add("reason", reason.trim());
+        }
+
+        ChapaRefundResponse response = restClient.post()
+                .uri(BASE_URL + "/refund/" + txRef)
+                .header("Authorization", bearerToken())
+                .contentType(MediaType.APPLICATION_FORM_URLENCODED)
+                .body(body)
+                .retrieve()
+                .body(ChapaRefundResponse.class);
+
+        if (response == null || !"success".equalsIgnoreCase(response.getStatus())) {
+            String message = response != null ? response.getMessage() : "No response from Chapa";
+            throw new RuntimeException("Chapa refund failed: " + message);
+        }
+
+        if (response.getData() == null || response.getData().getRef_id() == null) {
+            throw new RuntimeException("Chapa refund failed: missing refund reference");
+        }
+
+        return response.getData().getRef_id();
+    }
+
+    public ChapaRefundVerifyResponse verifyRefund(String refId) {
+        return restClient.get()
+                .uri(BASE_URL + "/refund/" + refId + "/verify")
+                .header("Authorization", bearerToken())
+                .retrieve()
+                .body(ChapaRefundVerifyResponse.class);
     }
 
     public boolean verifyTransaction(String txRef) {
