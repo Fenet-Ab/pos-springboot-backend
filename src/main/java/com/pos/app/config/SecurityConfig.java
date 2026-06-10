@@ -43,6 +43,11 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/api/auth/login", "/api/auth/forgot-password", "/error").permitAll()
                         .requestMatchers("/api/sales/chapa/**").permitAll()
+                        .requestMatchers(
+                                "/swagger-ui/**",
+                                "/swagger-ui.html",
+                                "/v3/api-docs/**"
+                        ).permitAll()
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
 
                         .requestMatchers(HttpMethod.POST, "/api/auth/register")
@@ -62,8 +67,16 @@ public class SecurityConfig {
                         )
                         .requestMatchers(
                                 HttpMethod.POST,
-                                "/api/sales"
+                                "/api/sales",
+                                "/api/sales/*/refund"
                         )
+                        .hasAnyAuthority(
+                                "ROLE_SUPER_ADMIN",
+                                "ROLE_ADMIN",
+                                "ROLE_MANAGER",
+                                "ROLE_CASHIER"
+                        )
+                        .requestMatchers("/api/cart/**")
                         .hasAnyAuthority(
                                 "ROLE_SUPER_ADMIN",
                                 "ROLE_ADMIN",
