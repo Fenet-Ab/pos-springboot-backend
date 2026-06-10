@@ -30,6 +30,16 @@ public class SaleResponse {
 
     private String checkoutUrl;
 
+    private BigDecimal refundAmount;
+
+    private String refundReason;
+
+    private String refundRefId;
+
+    private LocalDateTime refundedAt;
+
+    private String refundedBy;
+
     private LocalDateTime createdAt;
 
     private List<SaleItemResponse> items;
