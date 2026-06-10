@@ -1,5 +1,6 @@
 package com.pos.app.service;
 
+import com.pos.app.dto.request.RefundRequest;
 import com.pos.app.dto.request.SaleItemRequest;
 import com.pos.app.dto.request.SaleRequest;
 import com.pos.app.dto.response.SaleItemResponse;
@@ -18,6 +19,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
@@ -131,6 +133,65 @@ public class SaleServiceImpl implements SaleService {
         return mapToResponse(sale);
     }
 
+    @Override
+    @Transactional(readOnly = true)
+    public SaleResponse getSaleById(Long saleId) {
+        Sale sale = saleRepository.findById(saleId)
+                .orElseThrow(() -> new ResourceNotFoundException("Sale not found with id: " + saleId));
+        return mapToResponse(sale);
+    }
+
+    @Override
+    @Transactional
+    public SaleResponse refundSale(Long saleId, RefundRequest request, User user) {
+        Sale sale = saleRepository.findById(saleId)
+                .orElseThrow(() -> new ResourceNotFoundException("Sale not found with id: " + saleId));
+
+        if (sale.getPaymentStatus() == PaymentStatus.REFUNDED) {
+            throw new RuntimeException("This sale has already been refunded");
+        }
+
+        if (sale.getPaymentStatus() != PaymentStatus.COMPLETED) {
+            throw new RuntimeException("Only completed payments can be refunded");
+        }
+
+        BigDecimal refundAmount = request.getAmount() != null
+                ? request.getAmount()
+                : sale.getTotalAmount();
+
+        if (refundAmount.compareTo(BigDecimal.ZERO) <= 0) {
+            throw new RuntimeException("Refund amount must be greater than zero");
+        }
+
+        if (refundAmount.compareTo(sale.getTotalAmount()) > 0) {
+            throw new RuntimeException("Refund amount cannot exceed sale total of " + sale.getTotalAmount());
+        }
+
+        boolean isFullRefund = refundAmount.compareTo(sale.getTotalAmount()) == 0;
+
+        if (sale.getPaymentMethod() != PaymentMethod.CASH) {
+            String refundRefId = chapaService.refundTransaction(
+                    sale.getTxRef(),
+                    isFullRefund ? null : refundAmount,
+                    request.getReason()
+            );
+            sale.setRefundRefId(refundRefId);
+        }
+
+        sale.setRefundAmount(refundAmount);
+        sale.setRefundReason(request.getReason());
+        sale.setRefundedAt(LocalDateTime.now());
+        sale.setRefundedBy(user);
+
+        if (isFullRefund) {
+            sale.setPaymentStatus(PaymentStatus.REFUNDED);
+            restoreStock(sale.getItems());
+        }
+
+        sale = saleRepository.save(sale);
+        return mapToResponse(sale);
+    }
+
     private void validateRequest(SaleRequest request) {
         if (request.getItems() == null || request.getItems().isEmpty()) {
             throw new RuntimeException("Sale must contain at least one item");
@@ -160,6 +221,14 @@ public class SaleServiceImpl implements SaleService {
         }
     }
 
+    private void restoreStock(List<SaleItem> items) {
+        for (SaleItem item : items) {
+            Product product = item.getProduct();
+            product.setQuantity(product.getQuantity() + item.getQuantity());
+            productRepository.save(product);
+        }
+    }
+
     private SaleResponse mapToResponse(Sale sale) {
         List<SaleItemResponse> itemResponses = sale.getItems().stream()
                 .map(item -> SaleItemResponse.builder()
@@ -179,6 +248,11 @@ public class SaleServiceImpl implements SaleService {
                 .totalAmount(sale.getTotalAmount())
                 .txRef(sale.getTxRef())
                 .checkoutUrl(sale.getCheckoutUrl())
+                .refundAmount(sale.getRefundAmount())
+                .refundReason(sale.getRefundReason())
+                .refundRefId(sale.getRefundRefId())
+                .refundedAt(sale.getRefundedAt())
+                .refundedBy(sale.getRefundedBy() != null ? sale.getRefundedBy().getFullName() : null)
                 .createdAt(sale.getCreatedAt())
                 .items(itemResponses)
                 .build();
