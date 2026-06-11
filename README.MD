@@ -126,16 +126,4 @@ Once the app is running, open the interactive API docs at:
 
 ---
 
-## Security & Production Notes
-- Replace `JWT_SECRET` and `CHAPA_SECRET_KEY` with strong secrets in production.
-- Do not keep real SMTP credentials in `application.properties` in source control.
-- Consider using a proper migration tool (Flyway/Liquibase) instead of `ddl-auto=update` in production.
 
----
-
-If you want, I can:
-- add an `.env.example` file to the repo, or
-- update the README to include sample API calls, or
-- start the Docker Compose here and share the container logs.
-
-Enjoy — let me know which addition you'd like next!
